@@ -23,11 +23,13 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/dashboard',
-            element: <CandidateDashboardPage />,
+            element: <ProtectedRoute roles={['CALON_PESERTA']} />,
+            children: [{ index: true, element: <CandidateDashboardPage /> }],
           },
           {
             path: '/pendaftaran',
-            element: <CandidateWizardPage />,
+            element: <ProtectedRoute roles={['CALON_PESERTA']} />,
+            children: [{ index: true, element: <CandidateWizardPage /> }],
           },
           {
             path: '/verifikasi',

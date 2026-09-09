@@ -6,7 +6,7 @@ import type { AuthData, User } from '../types/api';
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (input: LoginInput) => Promise<void>;
+  login: (input: LoginInput) => Promise<User>;
   logout: () => void;
 }
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       async login(input) {
         const result: AuthData = await loginApi(input);
         setUser(result.user);
+        return result.user;
       },
       logout() {
         setAccessToken(null);

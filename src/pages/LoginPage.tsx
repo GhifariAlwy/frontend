@@ -1,6 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import type { Role } from '../types/api';
+
+function getRoleHome(role: Role): string {
+  switch (role) {
+    case 'ADMIN':
+      return '/admin';
+    case 'VERIFIKATOR':
+      return '/verifikasi';
+    case 'LEMBAGA_SELEKSI':
+      return '/wawancara';
+    case 'CALON_PESERTA':
+      return '/dashboard';
+  }
+}
+
 export function LoginPage({ internal = false }: { internal?: boolean }): JSX.Element {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -12,8 +27,14 @@ export function LoginPage({ internal = false }: { internal?: boolean }): JSX.Ele
     event.preventDefault();
     setError('');
     try {
-      await login({ identifier, password, channel: internal ? 'INTERNAL' : 'PUBLIK' });
-      navigate((location.state as { from?: string } | null)?.from ?? '/dashboard');
+      const loggedInUser = await login({
+        identifier,
+        password,
+        channel: internal ? 'INTERNAL' : 'PUBLIK',
+      });
+      const role = loggedInUser.role;
+      const requestedPath = (location.state as { from?: string } | null)?.from;
+      navigate(internal ? getRoleHome(role) : requestedPath ?? getRoleHome(role));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login gagal');
     }
