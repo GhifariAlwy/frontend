@@ -12,13 +12,14 @@ export const submit = (id: number) =>
 
 export async function uploadDocument(
   file: File,
-  kodePendaftaran: string,
+  pendaftaranId: number,
   persyaratanId: number,
   onUploadProgress?: (progress: number) => void,
 ): Promise<{ dokumen_uuid: string; nama_file_asli?: string }> {
   const form = new FormData();
   form.append('file', file);
-  form.append('kode_pendaftaran', kodePendaftaran);
+  // OpenAPI DokumenUploadRequest: pendaftaran_id numerik, BUKAN kode_pendaftaran.
+  form.append('pendaftaran_id', String(pendaftaranId));
   form.append('persyaratan_id', String(persyaratanId));
   const response = await apiClient.post<{
     data: { dokumen_uuid: string; nama_file_asli?: string };

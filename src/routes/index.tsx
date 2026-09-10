@@ -3,6 +3,7 @@ import { BerandaPage } from '../pages/BerandaPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { VerifyEmailPage } from '../pages/VerifyEmailPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { AppLayout } from '../layouts/AppLayout';
 import { CandidateDashboardPage } from '../pages/calon/CandidateDashboardPage';
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/login-internal', element: <LoginPage internal /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/verifikasi-email', element: <VerifyEmailPage /> },
   {
     element: <ProtectedRoute />,
     children: [

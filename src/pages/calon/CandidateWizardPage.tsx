@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -58,6 +65,10 @@ export function CandidateWizardPage(): JSX.Element {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const form = useForm<FormValues>({ defaultValues: emptyValues });
+  // Step hanya disinkronkan dari server SEKALI saat data pertama kali dimuat. Tanpa guard ini,
+  // refetch setelah simpan section menjalankan ulang effect dan setStep(sectionTerakhir)
+  // menimpa setStep(step+1) dari next() — wizard tidak pernah mau maju walau simpan sukses.
+  const stepSyncedRef = useRef(false);
   const requirements = useMemo(
     () => (registration?.beasiswaSnapshot?.persyaratan ?? []) as Requirement[],
     [registration],
@@ -65,7 +76,10 @@ export function CandidateWizardPage(): JSX.Element {
 
   useEffect(() => {
     if (!registration) return;
-    setStep(Math.min(Math.max(registration.sectionTerakhir ?? 1, 1), 4));
+    if (!stepSyncedRef.current) {
+      stepSyncedRef.current = true;
+      setStep(Math.min(Math.max(registration.sectionTerakhir ?? 1, 1), 4));
+    }
     const data = registration.dataDiri ?? {};
     const education = registration.pendidikan ?? {};
     form.reset({
@@ -215,11 +229,11 @@ export function CandidateWizardPage(): JSX.Element {
           {step === 2 && <Education form={form} errors={errors} />}
           {step === 3 && (
             <Documents
+              registration={registration}
               requirements={requirements}
               documents={documents}
-              notes={registration.verifikasi?.[0]?.checklist ?? []}
               setDocuments={setDocuments}
-              kode={registration.kodePendaftaran}
+              notes={registration.verifikasi?.[0]?.checklist ?? []}
             />
           )}
           {step === 4 && (
@@ -357,22 +371,26 @@ function Education({
   );
 }
 function Documents({
+  registration,
   requirements,
   documents,
   setDocuments,
-  kode,
   notes,
 }: {
+  registration: Registration;
   requirements: Requirement[];
   documents: DocumentItem[];
-  setDocuments: (docs: DocumentItem[]) => void;
-  kode: string;
+  setDocuments: Dispatch<SetStateAction<DocumentItem[]>>;
   notes: Checklist[];
 }): JSX.Element {
   const [progress, setProgress] = useState<Record<number, number>>({});
   const [error, setError] = useState('');
   async function choose(requirement: Requirement, file: File): Promise<void> {
     setError('');
+    if (!registration?.id) {
+      setError('Pendaftaran belum siap. Muat ulang halaman.');
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) {
       setError(`${requirement.nama_dokumen}: ukuran maksimal 2 MB.`);
       return;
@@ -383,11 +401,13 @@ function Documents({
       return;
     }
     try {
-      const result = await uploadDocument(file, kode, requirement.id, (value) =>
+      const result = await uploadDocument(file, registration.id, requirement.id, (value) =>
         setProgress({ ...progress, [requirement.id]: value }),
       );
-      setDocuments([
-        ...documents.filter((doc) => doc.persyaratanId !== requirement.id),
+      // Update fungsional: aman walau pengguna memilih beberapa berkas cepat berturut-turut
+      // (closure `documents` bisa usang sebelum upload selesai).
+      setDocuments((prev) => [
+        ...prev.filter((doc) => doc.persyaratanId !== requirement.id),
         { persyaratanId: requirement.id, dokumenUuid: result.dokumen_uuid, namaDokumen: file.name },
       ]);
     } catch (err) {
